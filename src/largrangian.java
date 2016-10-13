@@ -11,9 +11,9 @@ public class largrangian {
 	public static void main(String[] argv) throws FileNotFoundException {
 		int datan, I, J;
 		System.out.println(System.getProperty("user.dir"));
-		String fileName = "./src/test2.txt";
-		String outfile = "./src/test2out.txt";
-		String drawfile = "./src/test2draw.txt";
+		String fileName = "./src/test4.txt";
+		String outfile = "./src/test6out.txt";
+		String drawfile = "./src/test6draw.txt";
 		File input_file = new File(fileName);
 		File output_file = new File(outfile);
 		File draw_file = new File(drawfile);
@@ -44,7 +44,7 @@ public class largrangian {
 			output.println(h_i);
 			output.println("[f_j] fixed cost to build facility j:");
 			for(int a=0;a<J;a++){
-				f_j.add(scanner.nextDouble());
+				f_j.add(100 * scanner.nextDouble());
 			}
 			output.println(f_j);
 			output.println("[k_j] capacity of facility at j:");
@@ -84,8 +84,14 @@ public class largrangian {
 			output.println(facilityX);
 			output.println("[FacilityY] :");
 			output.println(facilityY);
-			List<Double> lambda_i = new ArrayList<Double>(Collections.nCopies(I, (Double) 0.0));
-		
+			List<Double> lambda_i = new ArrayList<Double>();
+			for(int i = 0; i < I; i++){
+				List<Double> temp_di = new ArrayList<Double>();
+				for(int j = 0; j < J; j++){
+					temp_di.add(h_i.get(i) * d_ji.get(j).get(i));
+				}
+				lambda_i.add(Collections.min(temp_di) + 1);
+			}
 			double L = 0.0,L_old=0.0;
 			double delta = 100.0;
 			int count=0,step=0;
@@ -99,14 +105,14 @@ public class largrangian {
 					delta = delta/2.0;
 					count =0;
 				}
-				System.out.println("step:" +step +", lambda:" +lambda_i);
+				System.out.println("step:" +step +", delta:" +delta + ", lambda:" +lambda_i);
 				List<Integer> X_j = new ArrayList<Integer>();
 				List<List<Integer>> Y_ji = new ArrayList<List<Integer>>();
-				int K;
 				//solve j knapsack problem
 				double[] LL = new double[2]; 
 				for(int j=0;j<J;j++){
 					List<Integer> Y_i = SolveDP(I,J,j,h_i,k_j.get(j),f_j.get(j),lambda_i,d_ji,LL);
+					//System.out.println(Y_i);
 					Y_ji.add(Y_i);
 					int check_X=0;
 					for(int y : Y_i){
@@ -134,8 +140,7 @@ public class largrangian {
 					}
 					L = L + (lambda_i.get(i) * (1.0-(double)Ysum));
 				}
-				//System.out.println("printL: " + L);
-				System.out.println(L);
+				//System.out.println(L);
 				if( L < L_old){
 					delta = delta/2.0;
 				}
@@ -156,7 +161,7 @@ public class largrangian {
 					for(int j=0;j<J;j++){
 						sum_Y_ji += Y_ji.get(j).get(i);
 					}
-					lambda_i.set(i,lambda_old.get(i)+delta *(1 - sum_Y_ji));
+					lambda_i.set(i,lambda_old.get(i) + delta * (1 - sum_Y_ji));
 				}
 				if(step!=0){
 					if(((L-L_old)/L < EPS) && L > L_old ){
@@ -186,6 +191,16 @@ public class largrangian {
 			List<List<Integer>> Y = backMap.get("Y");
 			List<List<Integer>> X_temp = backMap.get("X");
 			List<Integer> X = X_temp.get(0);
+			for(int j = 0; j < J; j++){
+				double usedj = 0.0;
+				for(int i = 0; i < I; i++){
+					usedj = usedj + (Y.get(j).get(i) * h_i.get(i));
+				}
+				if(usedj > k_j.get(j)){
+					System.out.println("capacity error");
+					break;
+				}
+			}
 			List<List<Double>> coorX = new ArrayList<List<Double>>();
 			List<List<Double>> coorY = new ArrayList<List<Double>>();
 			for(int j = 0; j < J; j++){
@@ -245,27 +260,37 @@ public class largrangian {
 		}
 		if(demand <= K){
 			List<Integer> temp_Y = new ArrayList<Integer>();
-			for(int i=0; i<I; i++){
+			double totalV = 0.0;
+			for(int i=0; i<I; i++){	
 				if((h_i.get(i) * d_ji.get(j).get(i) - lambda_i.get(i)) < 0){
 					temp_Y.add(1);
+					totalV = totalV + (h_i.get(i) * d_ji.get(j).get(i) - lambda_i.get(i));
 				}
 				else{
 					temp_Y.add(0);
 				}
 			}
-			return temp_Y;
+			if((totalV + f)<0){
+				return temp_Y;
+			}
+			else{
+				List<Integer> returnList = new ArrayList<Integer>(Collections.nCopies(I, 0));
+				return returnList;
+			}
 		}
 		List<List<Double>> dp_ik = new ArrayList<List<Double>>();
 		//initial value if f_j * X_j(which is 1)
 		dp_ik.add(new ArrayList<Double>(Collections.nCopies(K+1, (Double)0.0)));
+		//System.out.println("a");
 		//bottom up dp table
 		for(int i=0;i<I;i++){
 			List<Double> dp_i = new ArrayList<Double>();
 			int h = h_i.get(i);
 			double temp = h * d_ji.get(j).get(i) - lambda_i.get(i);
+			//System.out.print(temp+", ");
 			if(temp >=0){
 				//skip i
-				dp_ik.add(new ArrayList<Double>(Collections.nCopies(K+1, (Double)0.0)));
+				dp_ik.add(dp_ik.get(i));
 			}
 			else{
 				for(int k=0;k<=K;k++){
@@ -275,7 +300,7 @@ public class largrangian {
 					}
 					else{
 						//System.out.print("else: i "+i+" j "+j+" k "+k+" h "+h+"\n");
-						if( (dp_ik.get(i).get(k)) < (temp + dp_ik.get(i).get(k-h))  ){
+						if( (dp_ik.get(i).get(k)) <= (temp + dp_ik.get(i).get(k-h))  ){
 							dp_i.add(dp_ik.get(i).get(k));
 						}
 						else{
@@ -286,9 +311,16 @@ public class largrangian {
 				dp_ik.add(dp_i);
 			}
 		}
+		/*System.out.println();
+		for(int g=0; g<dp_ik.size(); g++){
+			System.out.println(dp_ik.get(g));
+		}
+		
+		System.out.println(dp_ik.get(I).get(K));*/
+		
 		if((dp_ik.get(I).get(K)+f) < 0) {
 			L[0] = L[0] + dp_ik.get(I).get(K) + f;
-			System.out.println("printL: " + L);
+			//System.out.println("printL: " + L);
 			//X_j =1
 			//dp_ik.at(I+1).at(K) is the optimal solution and we want to backtrack Y_ji of j
 			ArrayList<Integer> Y_i = new ArrayList<Integer>(Collections.nCopies(I, 0));
@@ -416,6 +448,29 @@ public class largrangian {
 	    	List<Double> penalty = new ArrayList<Double>();
 	    	List<Double> minj = new ArrayList<Double>();
 	    	List<Integer> minIndexj = new ArrayList<Integer>();
+	    	boolean addj = false;
+	    	for(int i = 0; i < Si.size(); i++){
+	        	List<Double> di = dij.get(i);
+	        	if(di.size() == 0){
+	        		addj = true;
+	        		break;
+	        	}
+	        }
+	    	if(addj == true){
+	    		int indexInSj = Sj.indexOf(Collections.min(Sj));
+		        int index = Sj_index.get(indexInSj);
+		        X_bar.set(index, 1);
+		        Sj.remove(indexInSj);
+		        Sj_index.remove(indexInSj);
+		        for(int i = 0; i < Si.size(); i++){
+		        	List<Double> di = dij.get(i);
+		        	List<Integer> diIndex = dijIndex.get(i);
+		        	di.add(d.get(index).get(Si.get(i)));
+		        	diIndex.add(index);
+		        	dij.set(i, di);
+		        	dijIndex.set(i, diIndex);
+		        }
+	    	}
 	        for(int i = 0; i < Si.size(); i++){
 	        	List<Double> di = dij.get(i);
 	        	List<Integer> diIndex = dijIndex.get(i);
@@ -429,7 +484,7 @@ public class largrangian {
 	        				penalty.add(Collections.min(temp)- min );
 	        			}
 	        			else{
-	        				penalty.add(5000.0);
+	        				penalty.add(Double.MAX_VALUE);
 	        			}
 	        			minj.add(min);
 	        			minIndexj.add(diIndex.get(minIndex));

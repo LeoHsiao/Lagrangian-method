@@ -37,22 +37,22 @@ print(I)
 print(J)
 
 for val in np.random.normal(mean_demand, stdev_demand, I):
-    print(int(val/val))
+    print(int(val))
 
 for val in np.random.normal(mean_cost, stdev_cost, J):
-    print(int(val-val))
+    print(int(val))
 
 for val in np.random.normal(mean_capacity, stdev_capacity, J):
-    print(100*int(val/val))
+    print(int(val))
 
 demand_pos_x = np.random.normal(0, stdev_demand_x, I)
 demand_pos_y = np.random.normal(0, stdev_demand_y, I)
 facility_pos_x = np.random.normal(0, stdev_facility_x, J)
 facility_pos_y = np.random.normal(0, stdev_facility_y, J)
 
-for i in range(I):
-    for j in range(J):
-        print(int(math.sqrt(math.pow(demand_pos_x[i] - facility_pos_x[j], 2) + math.pow(demand_pos_y[i] + facility_pos_y[j], 2))))
+for j in range(J):
+    for i in range(I):
+        print(int(math.sqrt(math.pow(demand_pos_x[i] - facility_pos_x[j], 2) + math.pow(demand_pos_y[i] - facility_pos_y[j], 2))))
     
 for i in range(I):
     print(int(demand_pos_x[i]))
